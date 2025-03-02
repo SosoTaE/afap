@@ -19,14 +19,26 @@ const (
 )
 
 func main() {
-	// Start the server
-	listener, err := net.Listen("tcp", "localhost:8080")
+	// Check command line arguments for IP address
+	bindIP := "localhost" // Default to localhost
+	port := "8080"        // Default port
+
+	if len(os.Args) > 1 {
+		bindIP = os.Args[1]
+	}
+
+	if len(os.Args) == 2 {
+		port = os.Args[2]
+	}
+
+	serverAddr := fmt.Sprintf("%s:%s", bindIP, port)
+	listener, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 	defer listener.Close()
 
-	fmt.Println("Server started on :8080")
+	fmt.Printf("Server started on %s\n", serverAddr)
 
 	for {
 		conn, err := listener.Accept()
@@ -44,17 +56,14 @@ func handleClient(conn net.Conn) {
 	clientAddr := conn.RemoteAddr().String()
 	fmt.Printf("New connection from: %s\n", clientAddr)
 
-	// Generate a new RSA key pair for this connection
 	privateKey, err := rsa.GenerateKey(rand.Reader, keySize)
 	if err != nil {
 		log.Printf("Failed to generate key pair: %v", err)
 		return
 	}
 
-	// Extract public key
 	publicKey := &privateKey.PublicKey
 
-	// Send public key to client
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
 		log.Printf("Failed to marshal public key: %v", err)
@@ -65,8 +74,6 @@ func handleClient(conn net.Conn) {
 		Type:  "RSA PUBLIC KEY",
 		Bytes: pubKeyBytes,
 	})
-
-	fmt.Println(string(pubKeyPEM))
 
 	_, err = conn.Write(pubKeyPEM)
 	if err != nil {
@@ -103,12 +110,10 @@ func handleClient(conn net.Conn) {
 	}
 	defer output.Close()
 
-	// Receive encrypted file chunks
 	encryptedBuf := make([]byte, bufferSize)
 	totalBytes := 0
 
 	for {
-		// Read encrypted chunk
 		n, err := conn.Read(encryptedBuf)
 		if err != nil {
 			if err == io.EOF {

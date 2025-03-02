@@ -20,6 +20,8 @@ const (
 func main() {
 
 	if len(os.Args) != 3 {
+		fmt.Println("Usage: afap  <server-address> <file-path>")
+		fmt.Println("Example: afap localhost:8080 ./myfile.txt")
 		os.Exit(1)
 	}
 
@@ -138,4 +140,6 @@ func main() {
 	} else {
 		fmt.Printf("Server response: %s\n", string(responseBuf[:n]))
 	}
+
+	conn.Close()
 }
